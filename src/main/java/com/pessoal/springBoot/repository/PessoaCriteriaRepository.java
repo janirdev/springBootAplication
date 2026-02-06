@@ -14,6 +14,7 @@ import org.springframework.stereotype.Repository;
 
 import com.pessoal.springBoot.entity.Contacto;
 import com.pessoal.springBoot.entity.Pessoa;
+import com.pessoal.springBoot.entity.dto.PageResponse;
 import com.pessoal.springBoot.entity.dto.PessoaContactoRec;
 
 import java.util.ArrayList;
@@ -26,17 +27,10 @@ public class PessoaCriteriaRepository {
     @PersistenceContext
     private EntityManager em;
 
-    /**
-     * Lista pessoas com seus contactos, com filtro por nome e paginação
-     *
-     * @param nome  filtro opcional pelo nome da pessoa
-     * @param page  número da página (0-based)
-     * @param size  tamanho da página
-     * @return lista paginada de PessoaContactoRec
-     */
-    public List<PessoaContactoRec> listar(String nome, int page, int size) {
+    public PageResponse<PessoaContactoRec> listar(String nome, int page, int size) {
 
         CriteriaBuilder cb = em.getCriteriaBuilder();
+
         CriteriaQuery<PessoaContactoRec> cq =
                 cb.createQuery(PessoaContactoRec.class);
 
@@ -56,25 +50,51 @@ public class PessoaCriteriaRepository {
         List<Predicate> filtros = new ArrayList<>();
 
         if (nome != null && !nome.isBlank()) {
-            filtros.add(cb.like(cb.lower(pessoa.get("nome")), "%" + nome.toLowerCase() + "%"));
+            filtros.add(cb.like(
+                    cb.lower(pessoa.get("nome")),
+                    "%" + nome.toLowerCase() + "%"
+            ));
         }
 
         if (!filtros.isEmpty()) {
             cq.where(cb.and(filtros.toArray(new Predicate[0])));
         }
 
-        // Ordenação opcional (por nome, por exemplo)
         cq.orderBy(cb.asc(pessoa.get("nome")));
 
-        // Cria query
         var query = em.createQuery(cq);
+        query.setFirstResult(page * size);
+        query.setMaxResults(size);
 
-        // Paginação
-        query.setFirstResult(page * size); // índice do primeiro resultado
-        query.setMaxResults(size);         // quantidade de resultados
+        List<PessoaContactoRec> resultados = query.getResultList();
 
-        return query.getResultList();
+        /* ======================
+           QUERY DE CONTAGEM
+        ======================= */
+        CriteriaQuery<Long> countQuery = cb.createQuery(Long.class);
+        Root<Pessoa> pessoaCount = countQuery.from(Pessoa.class);
+
+        pessoaCount.join("contactos", JoinType.LEFT);
+
+        countQuery.select(cb.countDistinct(pessoaCount));
+
+        if (!filtros.isEmpty()) {
+            countQuery.where(cb.and(filtros.toArray(new Predicate[0])));
+        }
+
+        Long total = em.createQuery(countQuery).getSingleResult();
+
+        int totalPages = (int) Math.ceil((double) total / size);
+
+        return new PageResponse<>(
+                resultados,
+                total,
+                totalPages,
+                page,
+                size
+        );
     }
 }
+
 
 

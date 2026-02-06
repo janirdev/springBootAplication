@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.pessoal.springBoot.entity.dto.PageResponse;
 import com.pessoal.springBoot.entity.dto.PessoaContactoRec;
 import com.pessoal.springBoot.repository.PessoaCriteriaRepository;
 
@@ -21,7 +22,7 @@ public class PessoaController {
     }
 
     @GetMapping
-    public List<PessoaContactoRec> listar(
+    public PageResponse<PessoaContactoRec> listar(
             @RequestParam(required = false) String nome, 
             @RequestParam(required = false) int page,
              @RequestParam(required = false) int size) {
