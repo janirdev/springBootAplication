@@ -26,7 +26,15 @@ public class PessoaCriteriaRepository {
     @PersistenceContext
     private EntityManager em;
 
-    public List<PessoaContactoRec> listar(String nome) {
+    /**
+     * Lista pessoas com seus contactos, com filtro por nome e paginação
+     *
+     * @param nome  filtro opcional pelo nome da pessoa
+     * @param page  número da página (0-based)
+     * @param size  tamanho da página
+     * @return lista paginada de PessoaContactoRec
+     */
+    public List<PessoaContactoRec> listar(String nome, int page, int size) {
 
         CriteriaBuilder cb = em.getCriteriaBuilder();
         CriteriaQuery<PessoaContactoRec> cq =
@@ -48,14 +56,25 @@ public class PessoaCriteriaRepository {
         List<Predicate> filtros = new ArrayList<>();
 
         if (nome != null && !nome.isBlank()) {
-            filtros.add(cb.like(pessoa.get("nome"), "%" + nome + "%"));
+            filtros.add(cb.like(cb.lower(pessoa.get("nome")), "%" + nome.toLowerCase() + "%"));
         }
 
         if (!filtros.isEmpty()) {
             cq.where(cb.and(filtros.toArray(new Predicate[0])));
         }
 
-        return em.createQuery(cq).getResultList();
+        // Ordenação opcional (por nome, por exemplo)
+        cq.orderBy(cb.asc(pessoa.get("nome")));
+
+        // Cria query
+        var query = em.createQuery(cq);
+
+        // Paginação
+        query.setFirstResult(page * size); // índice do primeiro resultado
+        query.setMaxResults(size);         // quantidade de resultados
+
+        return query.getResultList();
     }
 }
+
 

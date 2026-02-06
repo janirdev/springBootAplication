@@ -22,8 +22,10 @@ public class PessoaController {
 
     @GetMapping
     public List<PessoaContactoRec> listar(
-            @RequestParam(required = false) String nome) {
-        return repo.listar(nome);
+            @RequestParam(required = false) String nome, 
+            @RequestParam(required = false) int page,
+             @RequestParam(required = false) int size) {
+        return repo.listar(nome, page, size);
     }
 }
 
